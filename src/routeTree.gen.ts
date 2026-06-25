@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedResumeRouteImport } from './routes/_authenticated/resume'
 import { Route as AuthenticatedPlannerRouteImport } from './routes/_authenticated/planner'
 import { Route as AuthenticatedNotesRouteImport } from './routes/_authenticated/notes'
@@ -20,6 +21,8 @@ import { Route as AuthenticatedExamsRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated/attendance'
 import { Route as AuthenticatedAssignmentsRouteImport } from './routes/_authenticated/assignments'
+import { Route as AuthenticatedDoubtSolverIndexRouteImport } from './routes/_authenticated/doubt-solver.index'
+import { Route as AuthenticatedDoubtSolverThreadIdRouteImport } from './routes/_authenticated/doubt-solver.$threadId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -39,6 +42,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedResumeRoute = AuthenticatedResumeRouteImport.update({
   id: '/resume',
@@ -76,6 +84,18 @@ const AuthenticatedAssignmentsRoute =
     path: '/assignments',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDoubtSolverIndexRoute =
+  AuthenticatedDoubtSolverIndexRouteImport.update({
+    id: '/doubt-solver/',
+    path: '/doubt-solver/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDoubtSolverThreadIdRoute =
+  AuthenticatedDoubtSolverThreadIdRouteImport.update({
+    id: '/doubt-solver/$threadId',
+    path: '/doubt-solver/$threadId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -87,7 +107,10 @@ export interface FileRoutesByFullPath {
   '/notes': typeof AuthenticatedNotesRoute
   '/planner': typeof AuthenticatedPlannerRoute
   '/resume': typeof AuthenticatedResumeRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/doubt-solver/$threadId': typeof AuthenticatedDoubtSolverThreadIdRoute
+  '/doubt-solver/': typeof AuthenticatedDoubtSolverIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -99,7 +122,10 @@ export interface FileRoutesByTo {
   '/notes': typeof AuthenticatedNotesRoute
   '/planner': typeof AuthenticatedPlannerRoute
   '/resume': typeof AuthenticatedResumeRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/doubt-solver/$threadId': typeof AuthenticatedDoubtSolverThreadIdRoute
+  '/doubt-solver': typeof AuthenticatedDoubtSolverIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -113,7 +139,10 @@ export interface FileRoutesById {
   '/_authenticated/notes': typeof AuthenticatedNotesRoute
   '/_authenticated/planner': typeof AuthenticatedPlannerRoute
   '/_authenticated/resume': typeof AuthenticatedResumeRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
+  '/_authenticated/doubt-solver/$threadId': typeof AuthenticatedDoubtSolverThreadIdRoute
+  '/_authenticated/doubt-solver/': typeof AuthenticatedDoubtSolverIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,7 +156,10 @@ export interface FileRouteTypes {
     | '/notes'
     | '/planner'
     | '/resume'
+    | '/settings'
     | '/api/chat'
+    | '/doubt-solver/$threadId'
+    | '/doubt-solver/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -139,7 +171,10 @@ export interface FileRouteTypes {
     | '/notes'
     | '/planner'
     | '/resume'
+    | '/settings'
     | '/api/chat'
+    | '/doubt-solver/$threadId'
+    | '/doubt-solver'
   id:
     | '__root__'
     | '/'
@@ -152,7 +187,10 @@ export interface FileRouteTypes {
     | '/_authenticated/notes'
     | '/_authenticated/planner'
     | '/_authenticated/resume'
+    | '/_authenticated/settings'
     | '/api/chat'
+    | '/_authenticated/doubt-solver/$threadId'
+    | '/_authenticated/doubt-solver/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -191,6 +229,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/resume': {
       id: '/_authenticated/resume'
@@ -241,6 +286,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssignmentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/doubt-solver/': {
+      id: '/_authenticated/doubt-solver/'
+      path: '/doubt-solver'
+      fullPath: '/doubt-solver/'
+      preLoaderRoute: typeof AuthenticatedDoubtSolverIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/doubt-solver/$threadId': {
+      id: '/_authenticated/doubt-solver/$threadId'
+      path: '/doubt-solver/$threadId'
+      fullPath: '/doubt-solver/$threadId'
+      preLoaderRoute: typeof AuthenticatedDoubtSolverThreadIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -252,6 +311,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNotesRoute: typeof AuthenticatedNotesRoute
   AuthenticatedPlannerRoute: typeof AuthenticatedPlannerRoute
   AuthenticatedResumeRoute: typeof AuthenticatedResumeRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedDoubtSolverThreadIdRoute: typeof AuthenticatedDoubtSolverThreadIdRoute
+  AuthenticatedDoubtSolverIndexRoute: typeof AuthenticatedDoubtSolverIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -262,6 +324,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNotesRoute: AuthenticatedNotesRoute,
   AuthenticatedPlannerRoute: AuthenticatedPlannerRoute,
   AuthenticatedResumeRoute: AuthenticatedResumeRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedDoubtSolverThreadIdRoute: AuthenticatedDoubtSolverThreadIdRoute,
+  AuthenticatedDoubtSolverIndexRoute: AuthenticatedDoubtSolverIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

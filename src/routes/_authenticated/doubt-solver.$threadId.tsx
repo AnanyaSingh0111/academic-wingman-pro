@@ -36,7 +36,7 @@ function DoubtThread() {
     queryFn: async () => {
       const { data, error } = await supabase.from("chat_messages").select("*").eq("thread_id", threadId).order("created_at");
       if (error) throw error;
-      return ((data as Msg[]) ?? []).map((m) => ({
+      return (((data ?? []) as unknown) as Msg[]).map((m) => ({
         id: m.id, role: m.role as UIMessage["role"], parts: m.parts,
       } as UIMessage));
     },
@@ -47,7 +47,7 @@ function DoubtThread() {
 
   const transport = useMemo(() => new DefaultChatTransport({
     api: "/api/chat",
-    headers: () => (token ? { Authorization: `Bearer ${token}` } : {}),
+    headers: (): Record<string, string> => (token ? { Authorization: `Bearer ${token}` } : {}),
     body: { threadId },
   }), [token, threadId]);
 
