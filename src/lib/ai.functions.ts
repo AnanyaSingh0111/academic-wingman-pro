@@ -100,6 +100,9 @@ const WeeklyPlanSchema = z.object({
       subject: z.string().optional().default(""),
       task: z.string(),
       duration: z.number().min(15).max(240),
+      priority: z.enum(["low", "medium", "high"]).optional().default("medium"),
+      learningObjective: z.string().optional().default(""),
+      instructions: z.string().optional().default(""),
     })).default([]),
   })).default([]),
 });
