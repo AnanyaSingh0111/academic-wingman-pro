@@ -365,39 +365,64 @@ export type Database = {
       }
       study_tasks: {
         Row: {
+          ai_generated: boolean
+          ai_instructions: string | null
           completed: boolean
           created_at: string
+          description: string | null
           duration_min: number
+          exam_id: string | null
           id: string
+          learning_objective: string | null
           notes: string | null
+          priority: string
           scheduled_for: string
           subject_id: string | null
           title: string
           user_id: string
         }
         Insert: {
+          ai_generated?: boolean
+          ai_instructions?: string | null
           completed?: boolean
           created_at?: string
+          description?: string | null
           duration_min?: number
+          exam_id?: string | null
           id?: string
+          learning_objective?: string | null
           notes?: string | null
+          priority?: string
           scheduled_for?: string
           subject_id?: string | null
           title: string
           user_id: string
         }
         Update: {
+          ai_generated?: boolean
+          ai_instructions?: string | null
           completed?: boolean
           created_at?: string
+          description?: string | null
           duration_min?: number
+          exam_id?: string | null
           id?: string
+          learning_objective?: string | null
           notes?: string | null
+          priority?: string
           scheduled_for?: string
           subject_id?: string | null
           title?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "study_tasks_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "study_tasks_subject_id_fkey"
             columns: ["subject_id"]
