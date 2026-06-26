@@ -91,6 +91,34 @@ export const analyzeResume = createServerFn({ method: "POST" })
     return output;
   });
 
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+
+const WeeklyPlanSchema = z.object({
+  weeklyPlan: z.array(z.object({
+    day: z.string(),
+    tasks: z.array(z.object({
+      subject: z.string().optional().default(""),
+      task: z.string(),
+      duration: z.number().min(15).max(240),
+    })).default([]),
+  })).default([]),
+});
+type WeeklyPlan = z.infer<typeof WeeklyPlanSchema>;
+
+function defaultWeeklyPlan(days: number, subjects: { name: string }[], exams: { title: string; exam_date: string }[]): WeeklyPlan {
+  const subjNames = subjects.length ? subjects.map((s) => s.name) : ["General Study"];
+  const weeklyPlan = Array.from({ length: Math.min(days, 7) }).map((_, i) => {
+    const subject = subjNames[i % subjNames.length];
+    const tasks = [
+      { subject, task: `Review ${subject} fundamentals`, duration: 60 },
+      { subject, task: `Practice problems: ${subject}`, duration: 45 },
+    ];
+    if (exams[0]) tasks.push({ subject: exams[0].title, task: `Revise for ${exams[0].title}`, duration: 30 });
+    return { day: DAYS[i % 7], tasks };
+  });
+  return { weeklyPlan };
+}
+
 export const generateStudyPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PlanInput.parse(d))
@@ -100,36 +128,69 @@ export const generateStudyPlan = createServerFn({ method: "POST" })
       supabase.from("subjects").select("id,name").eq("user_id", userId),
       supabase.from("exams").select("title,exam_date,syllabus").eq("user_id", userId).gte("exam_date", new Date().toISOString()),
     ]);
+    const subjList = subjects ?? [];
+    const examList = exams ?? [];
     const g = gateway();
-    const { output } = await generateText({
-      model: g("google/gemini-3-flash-preview"),
-      output: Output.object({
-        schema: z.object({
-          tasks: z.array(z.object({
-            title: z.string(),
-            subject: z.string().optional(),
-            day_offset: z.number().min(0).max(14),
-            hour: z.number().min(6).max(22),
-            duration_min: z.number().min(15).max(180),
-            notes: z.string().optional(),
-          })).max(40),
-        }),
-      }),
-      prompt: `Generate a ${data.days}-day study plan. Subjects: ${(subjects ?? []).map((s) => s.name).join(", ") || "general"}. Upcoming exams: ${JSON.stringify(exams ?? [])}. Distribute focused sessions, mix subjects, include short revision blocks.`,
-    });
+
+    const basePrompt = `You are an AI Study Planner. Create a ${Math.min(data.days, 7)}-day study plan.
+Subjects: ${subjList.map((s) => s.name).join(", ") || "General"}.
+Upcoming exams: ${JSON.stringify(examList)}.
+Distribute focused sessions, mix subjects, include short revision blocks.
+
+Respond ONLY with a JSON object that strictly matches this schema:
+{
+  "weeklyPlan": [
+    { "day": "Monday", "tasks": [ { "subject": "string", "task": "string", "duration": 60 } ] }
+  ]
+}
+Rules: duration is an integer number of minutes (no separators). No markdown fences. No extra text outside the JSON.`;
+
+    const tryOnce = async (prompt: string): Promise<WeeklyPlan> => {
+      const { output } = await generateText({
+        model: g("google/gemini-3-flash-preview"),
+        output: Output.object({ schema: WeeklyPlanSchema }),
+        prompt,
+      });
+      return WeeklyPlanSchema.parse(output);
+    };
+
+    let plan: WeeklyPlan;
+    try {
+      plan = await tryOnce(basePrompt);
+    } catch {
+      try {
+        plan = await tryOnce(basePrompt + "\n\nIMPORTANT: You MUST return valid JSON matching the schema exactly. No markdown, no commentary. Every task needs subject, task, and integer duration.");
+      } catch {
+        plan = defaultWeeklyPlan(data.days, subjList, examList);
+      }
+    }
+
+    // Persist as study_tasks rows so the planner UI keeps working.
     const start = new Date(); start.setMinutes(0, 0, 0);
-    const subjMap = new Map((subjects ?? []).map((s) => [s.name.toLowerCase(), s.id]));
-    const rows = output.tasks.map((t) => {
-      const when = new Date(start); when.setDate(when.getDate() + t.day_offset); when.setHours(t.hour, 0, 0, 0);
-      return {
-        user_id: userId,
-        title: t.title,
-        subject_id: t.subject ? subjMap.get(t.subject.toLowerCase()) ?? null : null,
-        scheduled_for: when.toISOString(),
-        duration_min: t.duration_min,
-        notes: t.notes ?? null,
-      };
-    });
+    const startDow = (start.getDay() + 6) % 7; // 0 = Monday
+    const subjMap = new Map(subjList.map((s) => [s.name.toLowerCase(), s.id]));
+    const rows: Array<{ user_id: string; title: string; subject_id: string | null; scheduled_for: string; duration_min: number; notes: string | null }> = [];
+    for (const day of plan.weeklyPlan) {
+      const dayIdx = DAYS.findIndex((d) => d.toLowerCase() === day.day.toLowerCase());
+      if (dayIdx < 0) continue;
+      const offset = (dayIdx - startDow + 7) % 7;
+      let hour = 9;
+      for (const t of day.tasks) {
+        const when = new Date(start);
+        when.setDate(when.getDate() + offset);
+        when.setHours(hour, 0, 0, 0);
+        rows.push({
+          user_id: userId,
+          title: t.task,
+          subject_id: t.subject ? subjMap.get(t.subject.toLowerCase()) ?? null : null,
+          scheduled_for: when.toISOString(),
+          duration_min: Math.round(t.duration),
+          notes: t.subject || null,
+        });
+        hour = Math.min(21, hour + Math.max(1, Math.ceil(t.duration / 60)));
+      }
+    }
     if (rows.length) await supabase.from("study_tasks").insert(rows);
-    return { inserted: rows.length };
+    return { inserted: rows.length, weeklyPlan: plan.weeklyPlan };
   });
+
