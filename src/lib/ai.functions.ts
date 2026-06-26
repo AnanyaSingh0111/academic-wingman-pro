@@ -24,23 +24,40 @@ export const summarizeNote = createServerFn({ method: "POST" })
     const source = (note.content as string | null) ?? "";
     if (!source.trim()) throw new Error("Note has no content to summarize. Paste text into the note first.");
     const g = gateway();
-    const { output } = await generateText({
-      model: g("google/gemini-3-flash-preview"),
-      output: Output.object({
-        schema: z.object({
-          summary: z.string().describe("Concise summary in 4-6 bullet points using markdown"),
-          flashcards: z.array(z.object({ q: z.string(), a: z.string() })).max(10),
-          important_questions: z.array(z.string()).max(8),
-        }),
-      }),
-      prompt: `Summarize this note for a college student. Generate flashcards and important exam questions.\n\nNOTE:\n${source.slice(0, 12000)}`,
+
+    const schema = z.object({
+      summary: z.string(),
+      flashcards: z.array(z.object({ question: z.string(), answer: z.string() })),
+      importantQuestions: z.array(z.string()),
     });
+    const prompt = `Summarize this note for a college student. Generate up to 10 flashcards and up to 8 important exam questions. Return strictly the JSON object matching the schema with keys: summary (string), flashcards (array of {question, answer}), importantQuestions (array of strings).\n\nNOTE:\n${source.slice(0, 12000)}`;
+
+    const tryOnce = async () => {
+      const { output } = await generateText({
+        model: g("google/gemini-3-flash-preview"),
+        output: Output.object({ schema }),
+        prompt,
+      });
+      return schema.parse(output);
+    };
+
+    let result: z.infer<typeof schema>;
+    try {
+      result = await tryOnce();
+    } catch (e) {
+      try {
+        result = await tryOnce();
+      } catch (e2) {
+        throw new Error("AI could not generate a valid summary. Please try again in a moment.");
+      }
+    }
+
     await supabase.from("notes").update({
-      summary: output.summary,
-      flashcards: output.flashcards,
-      important_questions: output.important_questions,
+      summary: result.summary,
+      flashcards: result.flashcards.map((f) => ({ q: f.question, a: f.answer })),
+      important_questions: result.importantQuestions,
     }).eq("id", data.noteId);
-    return output;
+    return result;
   });
 
 export const analyzeResume = createServerFn({ method: "POST" })
