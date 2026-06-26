@@ -113,10 +113,10 @@ function defaultWeeklyPlan(days: number, subjects: { name: string }[], exams: { 
   const weeklyPlan = Array.from({ length: Math.min(days, 7) }).map((_, i) => {
     const subject = subjNames[i % subjNames.length];
     const tasks = [
-      { subject, task: `Review ${subject} fundamentals`, duration: 60 },
-      { subject, task: `Practice problems: ${subject}`, duration: 45 },
+      { subject, task: `Review ${subject} fundamentals`, duration: 60, priority: "medium" as const, learningObjective: `Solidify core ${subject} concepts`, instructions: `Re-read class notes for ${subject}, then summarize each topic in your own words.` },
+      { subject, task: `Practice problems: ${subject}`, duration: 45, priority: "high" as const, learningObjective: `Apply ${subject} knowledge to problems`, instructions: `Solve 5-10 practice problems without notes; review mistakes immediately.` },
     ];
-    if (exams[0]) tasks.push({ subject: exams[0].title, task: `Revise for ${exams[0].title}`, duration: 30 });
+    if (exams[0]) tasks.push({ subject: exams[0].title, task: `Revise for ${exams[0].title}`, duration: 30, priority: "high" as const, learningObjective: `Be exam-ready for ${exams[0].title}`, instructions: `Skim the syllabus and quiz yourself on weak topics.` });
     return { day: DAYS[i % 7], tasks };
   });
   return { weeklyPlan };
@@ -129,7 +129,7 @@ export const generateStudyPlan = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const [{ data: subjects }, { data: exams }] = await Promise.all([
       supabase.from("subjects").select("id,name").eq("user_id", userId),
-      supabase.from("exams").select("title,exam_date,syllabus").eq("user_id", userId).gte("exam_date", new Date().toISOString()),
+      supabase.from("exams").select("id,title,exam_date,syllabus").eq("user_id", userId).gte("exam_date", new Date().toISOString()),
     ]);
     const subjList = subjects ?? [];
     const examList = exams ?? [];
@@ -138,15 +138,15 @@ export const generateStudyPlan = createServerFn({ method: "POST" })
     const basePrompt = `You are an AI Study Planner. Create a ${Math.min(data.days, 7)}-day study plan.
 Subjects: ${subjList.map((s) => s.name).join(", ") || "General"}.
 Upcoming exams: ${JSON.stringify(examList)}.
-Distribute focused sessions, mix subjects, include short revision blocks.
+Distribute focused sessions, mix subjects, include short revision blocks. For each task include a concrete learning objective and step-by-step study instructions.
 
 Respond ONLY with a JSON object that strictly matches this schema:
 {
   "weeklyPlan": [
-    { "day": "Monday", "tasks": [ { "subject": "string", "task": "string", "duration": 60 } ] }
+    { "day": "Monday", "tasks": [ { "subject": "string", "task": "string", "duration": 60, "priority": "low|medium|high", "learningObjective": "string", "instructions": "string" } ] }
   ]
 }
-Rules: duration is an integer number of minutes (no separators). No markdown fences. No extra text outside the JSON.`;
+Rules: duration is an integer number of minutes. priority is one of low, medium, high. No markdown fences. No extra text outside the JSON.`;
 
     const tryOnce = async (prompt: string): Promise<WeeklyPlan> => {
       const { output } = await generateText({
@@ -162,17 +162,17 @@ Rules: duration is an integer number of minutes (no separators). No markdown fen
       plan = await tryOnce(basePrompt);
     } catch {
       try {
-        plan = await tryOnce(basePrompt + "\n\nIMPORTANT: You MUST return valid JSON matching the schema exactly. No markdown, no commentary. Every task needs subject, task, and integer duration.");
+        plan = await tryOnce(basePrompt + "\n\nIMPORTANT: Return valid JSON matching the schema exactly. Every task needs subject, task, integer duration, priority, learningObjective, instructions.");
       } catch {
         plan = defaultWeeklyPlan(data.days, subjList, examList);
       }
     }
 
-    // Persist as study_tasks rows so the planner UI keeps working.
     const start = new Date(); start.setMinutes(0, 0, 0);
-    const startDow = (start.getDay() + 6) % 7; // 0 = Monday
+    const startDow = (start.getDay() + 6) % 7;
     const subjMap = new Map(subjList.map((s) => [s.name.toLowerCase(), s.id]));
-    const rows: Array<{ user_id: string; title: string; subject_id: string | null; scheduled_for: string; duration_min: number; notes: string | null }> = [];
+    const examMap = new Map(examList.map((e) => [e.title.toLowerCase(), e.id]));
+    const rows: Array<Record<string, unknown>> = [];
     for (const day of plan.weeklyPlan) {
       const dayIdx = DAYS.findIndex((d) => d.toLowerCase() === day.day.toLowerCase());
       if (dayIdx < 0) continue;
@@ -186,14 +186,20 @@ Rules: duration is an integer number of minutes (no separators). No markdown fen
           user_id: userId,
           title: t.task,
           subject_id: t.subject ? subjMap.get(t.subject.toLowerCase()) ?? null : null,
+          exam_id: t.subject ? examMap.get(t.subject.toLowerCase()) ?? null : null,
           scheduled_for: when.toISOString(),
           duration_min: Math.round(t.duration),
           notes: t.subject || null,
+          description: t.instructions || null,
+          ai_instructions: t.instructions || null,
+          learning_objective: t.learningObjective || null,
+          priority: t.priority || "medium",
+          ai_generated: true,
         });
         hour = Math.min(21, hour + Math.max(1, Math.ceil(t.duration / 60)));
       }
     }
-    if (rows.length) await supabase.from("study_tasks").insert(rows);
+    if (rows.length) await supabase.from("study_tasks").insert(rows as never);
     return { inserted: rows.length, weeklyPlan: plan.weeklyPlan };
   });
 
