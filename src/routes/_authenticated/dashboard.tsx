@@ -103,7 +103,11 @@ function Dashboard() {
             <Card className="glass border-border/50 p-6 flex flex-col">
               <h2 className="font-display text-lg font-semibold flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-[var(--aurora-cyan)]" /> Attendance</h2>
               <div className="mt-6 flex-1 grid place-items-center">
-                <Ring pct={data?.attendancePct ?? 0} />
+                {data?.attendance.hasClasses ? (
+                  <Ring pct={data.attendance.percentage} />
+                ) : (
+                  <div className="text-center text-sm text-muted-foreground">No classes yet</div>
+                )}
               </div>
               <Link to="/attendance" className="mt-4 text-xs text-center text-muted-foreground hover:text-foreground">Mark today's classes →</Link>
             </Card>
