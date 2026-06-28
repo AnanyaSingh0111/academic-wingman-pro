@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles, BookOpen, ClipboardCheck, ListTodo, Timer, Bot, FileText,
-  CalendarDays, Trophy, ArrowRight, Check, Star, Zap, Brain, Target,
+  CalendarDays, Trophy, ArrowRight, Star, Zap, Brain, Target,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -44,7 +44,7 @@ const TESTIMONIALS = [
 ];
 
 const FAQ = [
-  { q: "Is CampusPilot AI free?", a: "Yes — the free plan covers all core modules. Pro unlocks unlimited AI usage and advanced analytics." },
+  { q: "Is CampusPilot AI free?", a: "Yes — CampusPilot AI is completely free for students. Every module, including the AI features, is included at no cost." },
   { q: "Will my data be safe?", a: "Your notes, attendance, and resumes are stored with row-level security. Only you can read them." },
   { q: "Does the AI understand engineering subjects?", a: "Yes — it's tuned for DSA, mathematics, electronics, and core CS topics." },
   { q: "Can I use it on mobile?", a: "Yes, the platform is fully responsive and feels great on every screen." },
@@ -61,7 +61,6 @@ function Landing() {
         <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition">Features</a>
           <a href="#testimonials" className="hover:text-foreground transition">Loved by</a>
-          <a href="#pricing" className="hover:text-foreground transition">Pricing</a>
           <a href="#faq" className="hover:text-foreground transition">FAQ</a>
         </nav>
         <div className="flex items-center gap-2">
@@ -179,31 +178,8 @@ function Landing() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="relative z-10 mx-auto max-w-7xl px-6 py-24">
-        <div className="text-center"><div className="text-xs uppercase tracking-[0.2em] text-[var(--aurora-cyan)]">Pricing</div>
-          <h2 className="mt-3 font-display text-4xl md:text-5xl font-bold tracking-tight">Start free. Upgrade when ready.</h2>
-        </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
-          {[
-            { name: "Free", price: "₹0", desc: "Forever free for every student.", features: ["All core modules", "30 AI requests / month", "Up to 50 notes", "Community support"], cta: "Get started", highlight: false },
-            { name: "Pro", price: "₹199", suffix: "/mo", desc: "Built for serious placement prep.", features: ["Unlimited AI usage", "Unlimited notes & resumes", "Advanced analytics", "Priority support"], cta: "Go Pro", highlight: true },
-          ].map((p) => (
-            <div key={p.name} className={`relative rounded-3xl p-8 ${p.highlight ? "gradient-primary text-white shadow-glow" : "glass"}`}>
-              {p.highlight && <div className="absolute -top-3 right-6 rounded-full bg-black/30 text-white text-xs px-3 py-1 backdrop-blur">Most popular</div>}
-              <div className="font-display text-lg font-semibold">{p.name}</div>
-              <div className="mt-3 flex items-baseline gap-1"><span className="font-display text-5xl font-bold">{p.price}</span><span className="opacity-80">{p.suffix}</span></div>
-              <p className={`mt-2 text-sm ${p.highlight ? "text-white/90" : "text-muted-foreground"}`}>{p.desc}</p>
-              <ul className="mt-6 space-y-2.5 text-sm">
-                {p.features.map((f) => <li key={f} className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0" /> {f}</li>)}
-              </ul>
-              <Button asChild className={`mt-8 w-full h-11 ${p.highlight ? "bg-white text-primary hover:bg-white/90" : "gradient-primary text-white"}`}>
-                <Link to="/auth">{p.cta}</Link>
-              </Button>
-            </div>
-          ))}
-        </div>
-      </section>
+
+
 
       {/* FAQ */}
       <section id="faq" className="relative z-10 mx-auto max-w-3xl px-6 py-24">
