@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { xpProgress } from "@/lib/xp";
 import { formatDistanceToNow } from "date-fns";
+import { computeAttendance } from "@/lib/attendance";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — CampusPilot AI" }] }),
@@ -34,16 +35,14 @@ function useDashboardData() {
         supabase.from("study_tasks").select("*").gte("scheduled_for", new Date(Date.now() - 86400000).toISOString()).order("scheduled_for").limit(6),
         supabase.from("achievements").select("*").order("earned_at", { ascending: false }).limit(6),
       ]);
-      const total = attendance.data?.length ?? 0;
-      const present = attendance.data?.filter((r: { status: string }) => r.status === "present").length ?? 0;
-      const attendancePct = total ? Math.round((present / total) * 100) : 0;
+      const attStats = computeAttendance((attendance.data as { status: string }[] | null) ?? []);
       const doneTasks = tasks.data?.filter((t: { completed: boolean }) => t.completed).length ?? 0;
       const productivity = tasks.data?.length ? Math.round((doneTasks / tasks.data.length) * 100) : 0;
       return {
         profile: profile.data,
         exams: exams.data ?? [],
         assignments: assignments.data ?? [],
-        attendancePct,
+        attendance: attStats,
         tasks: tasks.data ?? [],
         achievements: achievements.data ?? [],
         productivity,
@@ -104,7 +103,11 @@ function Dashboard() {
             <Card className="glass border-border/50 p-6 flex flex-col">
               <h2 className="font-display text-lg font-semibold flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-[var(--aurora-cyan)]" /> Attendance</h2>
               <div className="mt-6 flex-1 grid place-items-center">
-                <Ring pct={data?.attendancePct ?? 0} />
+                {data?.attendance.hasClasses ? (
+                  <Ring pct={data.attendance.percentage} />
+                ) : (
+                  <div className="text-center text-sm text-muted-foreground">No classes yet</div>
+                )}
               </div>
               <Link to="/attendance" className="mt-4 text-xs text-center text-muted-foreground hover:text-foreground">Mark today's classes →</Link>
             </Card>
