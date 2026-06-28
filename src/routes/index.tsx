@@ -44,7 +44,7 @@ const TESTIMONIALS = [
 ];
 
 const FAQ = [
-  { q: "Is CampusPilot AI free?", a: "Yes — the free plan covers all core modules. Pro unlocks unlimited AI usage and advanced analytics." },
+  { q: "Is CampusPilot AI free?", a: "Yes — CampusPilot AI is completely free for students. Every module, including the AI features, is included at no cost." },
   { q: "Will my data be safe?", a: "Your notes, attendance, and resumes are stored with row-level security. Only you can read them." },
   { q: "Does the AI understand engineering subjects?", a: "Yes — it's tuned for DSA, mathematics, electronics, and core CS topics." },
   { q: "Can I use it on mobile?", a: "Yes, the platform is fully responsive and feels great on every screen." },
