@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles, BookOpen, ClipboardCheck, ListTodo, Timer, Bot, FileText,
-  CalendarDays, Trophy, ArrowRight, Check, Star, Zap, Brain, Target,
+  CalendarDays, Trophy, ArrowRight, Star, Zap, Brain, Target,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
