@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Plus, Check, X, Ban, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { computeAttendance } from "@/lib/attendance";
 
 export const Route = createFileRoute("/_authenticated/attendance")({
   head: () => ({ meta: [{ title: "Attendance — CampusPilot AI" }] }),
@@ -57,7 +58,7 @@ function AttendancePage() {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
     const { error } = await supabase.from("attendance_records").insert({ user_id: u.user.id, subject_id, status });
-    if (error) toast.error(error.message); else { qc.invalidateQueries({ queryKey: ["attendance"] }); toast.success(`Marked ${status}`); }
+    if (error) toast.error(error.message); else { qc.invalidateQueries({ queryKey: ["attendance"] }); qc.invalidateQueries({ queryKey: ["dashboard"] }); toast.success(`Marked ${status}`); }
   };
 
   const removeSubject = async (id: string) => {
@@ -89,11 +90,9 @@ function AttendancePage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {subjects.map((s) => {
             const recs = records.filter((r) => r.subject_id === s.id);
-            const counted = recs.filter((r) => r.status !== "cancelled");
-            const present = counted.filter((r) => r.status === "present").length;
-            const total = counted.length;
-            const pct = total ? Math.round((present / total) * 100) : 0;
-            const need = neededClasses(present, total, s.target_attendance);
+            const stats = computeAttendance(recs);
+            const { present, counted: total, percentage: pct } = stats;
+            const need = stats.hasClasses ? neededClasses(present, total, s.target_attendance) : "No classes yet — mark your first.";
             return (
               <Card key={s.id} className="glass border-border/50 p-5 relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-1" style={{ background: s.color }} />
